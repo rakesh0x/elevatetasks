@@ -1,0 +1,74 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Role {
+  VIEWER
+  AUTHOR
+  REVIEWER
+  ADMIN
+}
+
+enum Status {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PUBLISHED
+  ARCHIVED
+}
+
+model User {
+  id        Int         @id @default(autoincrement())
+  name      String
+  email     String      @unique
+  role      Role
+
+  documents Document[]  @relation("AuthorDocuments")
+  audits    AuditLog[]  @relation("AuditActor")
+}
+
+model Document {
+  id        Int        @id @default(autoincrement())
+
+  title     String
+  body      String
+
+  status    Status     @default(DRAFT)
+
+  // Used for optimistic concurrency control
+  version   Int        @default(1)
+
+  authorId  Int
+  author    User       @relation("AuthorDocuments", fields: [authorId], references: [id])
+
+  audits    AuditLog[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model AuditLog {
+  id         Int        @id @default(autoincrement())
+
+  documentId Int
+  document   Document   @relation(fields: [documentId], references: [id])
+
+  actorId    Int
+  actor      User       @relation("AuditActor", fields: [actorId], references: [id])
+
+  action     String
+
+  oldStatus  Status?
+  newStatus  Status?
+
+  comment    String?
+
+  createdAt  DateTime   @default(now())
+}
